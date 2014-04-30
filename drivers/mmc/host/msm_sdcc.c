@@ -102,6 +102,33 @@ static struct mmc_command dummy52cmd = {
 	.data = NULL,
 	.mrq = &dummy52mrq,
 };
+
+#ifdef CONFIG_MMC_TI_SDIO_ADAPT
+struct platform_device *mmci_get_platform_device(void);
+struct mmc_host *mmci_get_mmc(void);
+
+typedef struct wlan_sdioDrv{
+	struct platform_device *pdev;
+	struct mmc_host *mmc;
+} wlan_sdioDrv_t;
+
+wlan_sdioDrv_t g_wlan_sdioDrv;
+
+struct platform_device *mmci_get_platform_device(void)
+{
+	printk("%s\n", __func__);
+	return g_wlan_sdioDrv.pdev;
+}
+EXPORT_SYMBOL(mmci_get_platform_device);
+
+struct mmc_host *mmci_get_mmc(void)
+{
+	printk("%s\n", __func__);
+	return g_wlan_sdioDrv.mmc;
+}
+EXPORT_SYMBOL(mmci_get_mmc);
+#endif
+
 /*
  * An array holding the Tuning pattern to compare with when
  * executing a tuning cycle.
@@ -2927,6 +2954,12 @@ static u32 msmsdcc_setup_pwr(struct msmsdcc_host *host, struct mmc_ios *ios)
 
 	switch (ios->power_mode) {
 	case MMC_POWER_OFF:
+#ifdef CONFIG_TIWLAN_POWER_CONTROL_FUNC
+		if (host->plat && host->plat->is_ti_wifi) {
+			pr_info("ti_wifi_power:0, mmc->index=%d\n", mmc->index);
+			ti_wifi_power(0);
+		}
+#endif
 		pwr = MCI_PWR_OFF;
 		msmsdcc_cfg_mpm_sdiowakeup(host, SDC_DAT1_DISABLE);
 		/*
@@ -2947,6 +2980,12 @@ static u32 msmsdcc_setup_pwr(struct msmsdcc_host *host, struct mmc_ios *ios)
 		}
 		break;
 	case MMC_POWER_UP:
+#ifdef CONFIG_TIWLAN_POWER_CONTROL_FUNC
+		if (host->plat && host->plat->is_ti_wifi) {
+			pr_info("ti_wifi_power:1, mmc->index=%d\n", mmc->index);
+			ti_wifi_power(1);
+		}
+#endif
 		/* writing PWR_UP bit is redundant */
 		pwr = MCI_PWR_UP;
 		msmsdcc_cfg_mpm_sdiowakeup(host, SDC_DAT1_ENABLE);
@@ -5914,6 +5953,14 @@ msmsdcc_probe(struct platform_device *pdev)
 	mmc->caps |= MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED;
 	mmc->caps |= MMC_CAP_WAIT_WHILE_BUSY | MMC_CAP_ERASE;
 	mmc->caps |= MMC_CAP_HW_RESET;
+
+#ifdef CONFIG_TIWLAN_POWER_CONTROL_FUNC
+	if (host->plat && host->plat->is_ti_wifi) {
+		mmc->caps |= MMC_PM_KEEP_POWER;
+		mmc->caps |= MMC_CAP_NONREMOVABLE;
+		mmc->caps |= MMC_CAP_POWER_OFF_CARD;
+	}
+#endif
 	/*
 	 * If we send the CMD23 before multi block write/read command
 	 * then we need not to send CMD12 at the end of the transfer.
@@ -6049,6 +6096,14 @@ msmsdcc_probe(struct platform_device *pdev)
 	} else if (!plat->status)
 		pr_err("%s: No card detect facilities available\n",
 		       mmc_hostname(mmc));
+
+#ifdef CONFIG_MMC_TI_SDIO_ADAPT
+	if (plat && plat->is_ti_wifi) {
+		pr_info("%s: Wi-Fi OS Router init\n", __func__);
+		g_wlan_sdioDrv.pdev = pdev;
+		g_wlan_sdioDrv.mmc = host->mmc;
+	}
+#endif
 
 	mmc_set_drvdata(pdev, mmc);
 

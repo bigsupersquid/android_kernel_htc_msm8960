@@ -145,7 +145,6 @@ static struct msm_bus_scale_pdata mdp_bus_scale_pdata = {
 };
 #endif /* CONFIG_MSM_BUS_SCALING */
 
-
 struct mdp_table_entry pyd_color_v11[] = {
        {0x93400, 0x0222, 0x0},
        {0x93404, 0xFFE4, 0x0},
@@ -430,6 +429,7 @@ struct mdp_table_entry pyd_auo_gamma[] = {
        {0x94BFC, 0xFFFFFF, 0x0},
        {0x90070, 0x1F, 0x0},
 };
+
 struct mdp_table_entry pyd_sharp_gamma[] = {
        {0x94800, 0x000000, 0x0},
        {0x94804, 0x010101, 0x0},
